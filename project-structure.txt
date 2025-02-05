@@ -1,0 +1,22 @@
+.
+├── docker-compose.yml
+├── .env
+├── .gitignore
+├── README.md
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── next.config.js
+│   ├── public/
+│   │   └── images/
+│   │       └── logo.png
+│   └── src/
+│       ├── app/
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       └── components/
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       └── main.py 

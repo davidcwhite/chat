@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.Python
+env/
+venv/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+pip-debug.log*
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+.vercel
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+*.pem
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output
+
+# Cache
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python specific
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/ 
