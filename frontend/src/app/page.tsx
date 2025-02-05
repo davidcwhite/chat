@@ -324,15 +324,17 @@ export default function Home() {
           isSidebarOpen ? 'w-64' : 'w-0 md:w-16'
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/images/BANK-logo_white-1-1024x349 copy.png"
-              alt="Bank Logo"
-              width={180}
-              height={62}
-              className={`${!isSidebarOpen && 'md:hidden'}`}
-            />
+        <div className="flex items-center h-16 px-4">
+          <div className="flex-1 flex justify-center">
+            <div className="flex items-center">
+              <Image
+                src="/images/logoipsum-logo-1-1.png"
+                alt="Logo"
+                width={150}
+                height={52}
+                className={`${!isSidebarOpen && 'md:hidden'}`}
+              />
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(!isSidebarOpen)}
@@ -340,18 +342,18 @@ export default function Home() {
           >
             {isSidebarOpen ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             ) : (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             )}
           </button>
         </div>
         
         <div className={`${!isSidebarOpen && 'md:hidden'}`}>
-          <div className="px-4 mb-4 flex justify-center">
+          <div className="px-4 py-8 flex justify-center">
             <button 
               onClick={() => setMessages([])} 
               className="px-6 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
@@ -359,8 +361,8 @@ export default function Home() {
               New Chat
             </button>
           </div>
-          <div className="border-t border-gray-700 mx-4 pt-4">
-            <div className="text-sm text-gray-400">Previous chats</div>
+          <div className="border-t border-gray-700 mx-4">
+            <div className="text-sm text-gray-400 pt-8">Previous chats</div>
           </div>
         </div>
       </div>
