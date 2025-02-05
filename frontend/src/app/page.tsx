@@ -484,7 +484,7 @@ export default function Home() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1 resize-none p-2 focus:outline-none"
-                  placeholder="Message PrimaryGPT..."
+                  placeholder="How can I help?"
                   style={{ maxHeight: '200px', minHeight: '24px' }}
                 />
                 <button 
