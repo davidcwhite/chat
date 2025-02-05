@@ -2,7 +2,7 @@
 
 A modern AI chat application built with Next.js, FastAPI, and OpenAI.
 
-![AI Chat Interface](frontend/public/images/chat.png)
+![AI Chat Interface](frontend/public/images/chat_screenshot.png)
 
 ## Features
 
