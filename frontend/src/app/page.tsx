@@ -18,6 +18,9 @@ export default function Home() {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isSearchMode, setIsSearchMode] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
 
   const smoothScrollToBottom = () => {
     if (!messagesEndRef.current) return;
@@ -94,7 +97,12 @@ export default function Home() {
     if (!input.trim() || isLoading) return
 
     setIsLoading(true)
-    const newMessages = [...messages, { role: 'user', content: input }]
+    const messageToSend = isSearchMode ? `[SEARCH]${input}` : input
+    
+    const newMessages = [...messages, { 
+      role: 'user', 
+      content: isSearchMode ? `🔍 ${input}` : input
+    }]
     setMessages(newMessages)
     setInput('')
     setCurrentStreamingMessage('')
@@ -106,10 +114,14 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          message: input,
+          message: messageToSend,
           model: selectedModel 
         }),
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
@@ -145,9 +157,12 @@ export default function Home() {
       setMessages(prev => [...prev, { role: 'assistant', content: fullMessage }])
     } catch (error) {
       console.error('Error:', error)
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error while searching. Please try again.' 
+      }])
     } finally {
       setIsLoading(false)
-      setCurrentStreamingMessage('')
     }
   }
 
@@ -464,7 +479,7 @@ export default function Home() {
           {isLoading && !currentStreamingMessage && (
             <div className="flex justify-start ml-4">
               <div className="px-4 py-2 text-gray-900">
-                Thinking...
+                {isSearchMode ? "Searching the web..." : "Thinking..."}
               </div>
             </div>
           )}
@@ -477,6 +492,21 @@ export default function Home() {
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200">
               {/* Message input area */}
               <div className="flex gap-4 p-2">
+                {isSearchMode && (
+                  <div className="absolute top-0 left-0 m-2 px-2 py-1 text-xs bg-purple-100 text-purple-600 rounded flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                      />
+                    </svg>
+                    Web Search Mode
+                  </div>
+                )}
+                {searchError && (
+                  <div className="absolute top-0 right-0 m-2 px-2 py-1 text-xs bg-red-100 text-red-600 rounded">
+                    {searchError}
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -484,7 +514,7 @@ export default function Home() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1 resize-none p-2 focus:outline-none"
-                  placeholder="How can I help?"
+                  placeholder={isSearchMode ? "Search the web..." : "How can I help?"}
                   style={{ maxHeight: '200px', minHeight: '24px' }}
                 />
                 <button 
@@ -513,15 +543,25 @@ export default function Home() {
                   </button>
 
                   {/* Web search */}
-                  <button
-                    type="button"
-                    className="p-2 text-gray-500 hover:text-purple-500 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Web search"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={`p-2 ${
+                        isSearchMode ? 'text-purple-500 bg-gray-100' : 'text-gray-500'
+                      } hover:text-purple-500 hover:bg-gray-100 rounded-lg transition-colors`}
+                      title={isSearchMode ? 'Web search enabled' : 'Enable web search'}
+                      onClick={() => setIsSearchMode(!isSearchMode)}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                        />
+                      </svg>
+                    </button>
+                    {isSearchMode && (
+                      <span className="text-xs text-purple-500">Search Mode Active</span>
+                    )}
+                  </div>
 
                   {/* Code interpreter */}
                   <button
