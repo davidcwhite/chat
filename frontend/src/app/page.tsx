@@ -124,6 +124,7 @@ export default function Home() {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No reader available')
 
+      let fullMessage = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -137,7 +138,8 @@ export default function Home() {
             try {
               const data = JSON.parse(line.slice(5))
               if (data.content) {
-                setCurrentStreamingMessage(prev => prev + data.content)
+                fullMessage += data.content
+                setCurrentStreamingMessage(fullMessage)
               }
             } catch (e) {
               console.error('Error parsing SSE data:', e)
@@ -145,6 +147,10 @@ export default function Home() {
           }
         })
       }
+
+      // Add assistant's complete message to messages array
+      setMessages(prev => [...prev, { role: 'assistant', content: fullMessage }])
+      setCurrentStreamingMessage('')
 
     } catch (error) {
       console.error('Error:', error)
