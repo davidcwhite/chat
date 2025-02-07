@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
-from typing import List
+from typing import List, Dict
 import asyncio
 from bs4 import BeautifulSoup
 import requests
@@ -16,6 +16,8 @@ from langchain_community.document_transformers import BeautifulSoupTransformer
 import re
 from datetime import datetime
 from urllib.parse import quote
+from .services.search import search_service
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -33,6 +35,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+logger = logging.getLogger(__name__)
 
 async def get_sp500_data() -> dict:
     """Fetch S&P 500 data from multiple financial sources"""
@@ -92,92 +96,14 @@ async def get_sp500_data() -> dict:
     
     return results
 
-async def perform_web_search(query: str, max_results: int = 3) -> list:
+async def perform_web_search(query: str) -> List[Dict]:
+    """Perform web search using crawl4ai"""
     try:
-        if "s&p" in query.lower() and ("price" in query.lower() or "closing" in query.lower()):
-            results = await get_sp500_data()
-            
-            if not results:
-                return [{
-                    'title': 'S&P 500 Data Not Available',
-                    'link': 'https://finance.yahoo.com/quote/%5EGSPC',
-                    'body': 'Could not fetch real-time S&P 500 data. Please check financial websites directly.'
-                }]
-            
-            formatted_results = []
-            seen_urls = set()  # Track unique URLs
-            
-            for result in results:
-                if result['link'] not in seen_urls:  # Only add if URL is new
-                    seen_urls.add(result['link'])
-                    formatted_results.append({
-                        'title': f"S&P 500 Price from {result['source'].split('/')[2]}",
-                        'link': result['source'],
-                        'body': f"Price: {result['price']}\nTime: {result['time']}"
-                    })
-            
-            return formatted_results[:max_results]  # Ensure we don't exceed max_results
-        else:
-            # Use DuckDuckGo to get initial search results
-            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(search_url, headers=headers) as response:
-                    html = await response.text()
-                    
-            soup = BeautifulSoup(html, 'html.parser')
-            results = []
-            
-            # Find all result containers
-            result_elements = soup.find_all('div', class_='result')[:max_results]
-            urls = []
-            
-            for element in result_elements:
-                try:
-                    title_element = element.find('a', class_='result__a')
-                    if not title_element:
-                        continue
-                        
-                    title = title_element.text.strip()
-                    link = title_element.get('href', '')
-                    
-                    if link and link.startswith('http'):
-                        urls.append(link)
-                        snippet_element = element.find('a', class_='result__snippet')
-                        snippet = snippet_element.text.strip() if snippet_element else ""
-                        
-                        results.append({
-                            'title': title,
-                            'link': link,
-                            'body': snippet
-                        })
-                except Exception as e:
-                    print(f"Error processing search result: {str(e)}")
-                    continue
-            
-            # Use LangChain's AsyncHtmlLoader for the top results
-            if urls:
-                try:
-                    loader = AsyncHtmlLoader(urls)
-                    docs = await loader.aload()
-                    
-                    # Transform HTML to readable text
-                    bs_transformer = BeautifulSoupTransformer()
-                    docs_transformed = bs_transformer.transform_documents(docs)
-                    
-                    # Update results with more detailed content
-                    for i, doc in enumerate(docs_transformed[:len(results)]):
-                        results[i]['body'] = doc.page_content[:500] + "..."  # Limit content length
-                except Exception as e:
-                    print(f"Error loading web content: {str(e)}")
-                
-            return results
+        results = await search_service.search(query)
+        return results
     except Exception as e:
-        print(f"Search error: {str(e)}")
-        raise
+        logger.error(f"Search error: {str(e)}")
+        return []
 
 class ChatMessage(BaseModel):
     message: str
@@ -193,69 +119,37 @@ class SearchResult(BaseModel):
 async def read_root():
     return {"status": "healthy"}
 
-@app.post("/search")
-async def search(query: str, num_results: int = 3) -> List[SearchResult]:
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=num_results))
-            
-        return [
-            SearchResult(
-                title=result['title'],
-                link=result['link'],
-                snippet=result['body']
-            )
-            for result in results
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/chat")
 async def chat(message: ChatMessage):
     try:
+        # Check if this is a search query
         if message.message.startswith("[SEARCH]"):
             query = message.message[8:].strip()
-            print(f"Processing search query: {query}")
+            logger.info(f"Processing search query: {query}")
             
-            try:
-                results = await perform_web_search(query)
-                
-                if not results:
-                    search_results = "No relevant search results found."
-                else:
-                    print(f"Found {len(results)} results")
-                    search_results = "\n\n".join([
-                        f"Source: {result['title']}\n"
-                        f"URL: {result['link']}\n"
-                        f"Summary: {result['body']}"
-                        for result in results
-                    ])
-                    print(f"Search results being sent to model:\n{search_results}")
-                
-                system_message = f"""You are a helpful assistant that provides accurate information based on web search results.
-                
-                Search query: "{query}"
-                
-                Search Results:
-                {search_results}
-                
-                Please provide a comprehensive answer using these search results. Your response should:
-                1. Directly answer the query using the most recent information from the search results
-                2. Include specific details, numbers, and dates from the search results
-                3. Cite sources using markdown links like this: [Source Title](URL)
-                4. Format the response clearly with markdown
-                5. If the search results don't contain a direct answer, acknowledge this and suggest where to find the information
-                6. For financial data or statistics, include the date/time of the information
-                """
-                print("System message created with search results")  # Debug log
-            except Exception as e:
-                print(f"Search error: {str(e)}")
-                system_message = f"""You are a helpful assistant. The web search for "{query}" failed due to technical limitations. 
-                Please inform the user that you couldn't perform the search right now and suggest they:
-                1. Try again in a few moments
-                2. Try rephrasing their query
-                3. Consider checking popular websites directly for this information
-                """
+            # Use search service
+            results = await search_service.search(query)
+            
+            if not results:
+                search_results = "No relevant search results found."
+            else:
+                # Format search results with more content
+                search_results = "\n\n".join([
+                    f"Source: [{result['title']}]({result['source']})\n"
+                    f"{result['snippet']}\n"
+                    f"Content: {result['content'][:1000]}..."  # Increased to 1K chars
+                    for result in results
+                ])
+
+            system_message = f"""You are a helpful assistant. Here are the search results for "{query}":
+
+{search_results}
+
+Please provide a clear summary of the information, including:
+1. The most recent and relevant data
+2. Direct quotes or numbers when available
+3. Sources cited as markdown links
+"""
         else:
             system_message = """You are a helpful assistant that uses markdown formatting effectively. Always format your responses using:
                 - Headers with # for sections
@@ -312,4 +206,14 @@ async def chat(message: ChatMessage):
         
     except Exception as e:
         print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) 
+
+@app.get("/test-search")
+async def test_search(query: str):
+    """Test endpoint for search functionality"""
+    try:
+        results = await search_service.search(query)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.error(f"Test search error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 

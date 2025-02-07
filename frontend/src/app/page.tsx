@@ -94,73 +94,61 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim()) return
 
-    setIsLoading(true)
-    const messageToSend = isSearchMode ? `[SEARCH]${input}` : input
+    // Format message for search mode
+    const messageText = isSearchMode ? `[SEARCH]${input}` : input
     
-    const newMessages = [...messages, { 
-      role: 'user', 
-      content: isSearchMode ? `🔍 ${input}` : input
-    }]
-    setMessages(newMessages)
+    // Add user message
+    const userMessage = { role: 'user', content: input }
+    setMessages(prev => [...prev, userMessage])
     setInput('')
+    setIsLoading(true)
     setCurrentStreamingMessage('')
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+      const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          message: messageToSend,
-          model: selectedModel 
-        }),
+        body: JSON.stringify({
+          message: messageText,
+          model: selectedModel
+        })
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
+      if (!response.ok) throw new Error('Network response was not ok')
+      
+      // Handle streaming response
       const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullMessage = ''
-
-      if (!reader) {
-        throw new Error('No reader available')
-      }
+      if (!reader) throw new Error('No reader available')
 
       while (true) {
-        const { value, done } = await reader.read()
+        const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value)
+        // Process chunks
+        const chunk = new TextDecoder().decode(value)
         const lines = chunk.split('\n')
         
-        for (const line of lines) {
+        lines.forEach(line => {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(5))
               if (data.content) {
-                fullMessage += data.content
-                setCurrentStreamingMessage(fullMessage)
+                setCurrentStreamingMessage(prev => prev + data.content)
               }
-            } catch (error) {
-              console.error('Error parsing chunk:', error)
+            } catch (e) {
+              console.error('Error parsing SSE data:', e)
             }
           }
-        }
+        })
       }
 
-      // After streaming is complete, add the full message to the messages array
-      setMessages(prev => [...prev, { role: 'assistant', content: fullMessage }])
     } catch (error) {
       console.error('Error:', error)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, I encountered an error while searching. Please try again.' 
-      }])
+      setSearchError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setIsLoading(false)
     }
