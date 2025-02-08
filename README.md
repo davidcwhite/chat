@@ -11,7 +11,7 @@ An intelligent chat assistant with real-time web search capabilities.
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 
-![AI Chat Interface](frontend/public/images/chat-v2.png)
+![AI Chat Interface](frontend/public/images/chat-v2.jpg)
 
 ## Features
 
