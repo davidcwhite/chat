@@ -1,0 +1,32 @@
+ai-chat/
+├── backend/
+│   ├── app/
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   └── search.py        # Web search functionality
+│   │   ├── __init__.py
+│   │   └── main.py             # FastAPI application
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/     # React components
+│   │   │   │   ├── ChatInput.tsx
+│   │   │   │   ├── Message.tsx
+│   │   │   │   └── ModelSelector.tsx
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx       # Main chat interface
+│   │   └── styles/
+│   │       └── globals.css     # Global styles + Tailwind
+│   │   
+│   ├── public/
+│   │   └── images/
+│   │       └── chat-v2.png    # App screenshot
+│   ├── Dockerfile
+│   └── package.json
+├── docs/
+│   ├── project-structure.txt   # This file
+│   └── prd.md                 # Product requirements
+├── docker-compose.yml
+└── README.md 
